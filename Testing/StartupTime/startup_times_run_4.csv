@@ -1,4 +1,0 @@
-ServiceName,TotalStartupTime(s),ConsulCheckTime(s),HealthCheckTime(s),ConsulChecksPassed,ContainerStartTime(s)
-parking,12.85,11.85,12.85,true,1.84
-traffic,15.53,10.53,15.53,true,1.53
-weather,14.57,11.57,14.57,true,1.56
