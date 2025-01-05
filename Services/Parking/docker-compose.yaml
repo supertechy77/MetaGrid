@@ -1,0 +1,13 @@
+services:
+  parking:
+    image: parking-service
+    deploy:
+      replicas: 5
+    expose:
+      - "7050"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

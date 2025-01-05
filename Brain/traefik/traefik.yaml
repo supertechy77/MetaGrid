@@ -1,0 +1,19 @@
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  consulCatalog:
+    prefix: "traefik"
+    exposedByDefault: false
+    defaultRule: "Host(`{{ .Name }}.localhost`)"
+    connectAware: true
+
+    endpoint:
+      address: "consul:8500"
+      scheme: "http"
+

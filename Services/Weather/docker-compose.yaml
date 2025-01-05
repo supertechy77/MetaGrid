@@ -1,0 +1,13 @@
+services:
+  weather:
+    image: weather-service
+    deploy:
+      replicas: 5
+    expose:
+      - "6050"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

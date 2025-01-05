@@ -1,0 +1,13 @@
+services:
+  traffic:
+    image: traffic-light-service
+    deploy:
+      replicas: 5
+    expose:
+      - "5050"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
