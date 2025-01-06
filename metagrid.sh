@@ -95,5 +95,5 @@ docker compose down
 echo "All services shut down. Cleaning up Docker images..."
 docker rmi parking-service traffic-light-service weather-service || true
 
-echo "Cleanup complete. Closing terminal."
+echo "Cleanup complete."
 exit 0
