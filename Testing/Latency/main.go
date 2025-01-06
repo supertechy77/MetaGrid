@@ -31,9 +31,9 @@ type TestResult struct {
 func main() {
 	// Define services to test
 	services := []Service{
-		{"Weather Service", "http://weatherservice.localhost/health"},
-		{"Parking Service", "http://parkingservice.localhost/health"},
-		{"Traffic Light Service", "http://trafficlights.localhost/health"},
+		{"Weather Service", "http://weather.localhost/health"},
+		{"Parking Service", "http://parking.localhost/health"},
+		{"Traffic Light Service", "http://traffic.localhost/health"},
 	}
 
 	servicesRoot := "../../Services"
@@ -62,6 +62,10 @@ func main() {
 			fmt.Printf("Successfully started service in %s\n", dir)
 		}
 	}
+
+	// Wait for services to be ready
+	fmt.Println("Waiting for services to be ready...")
+	time.Sleep(10 * time.Second)
 
 	// Output CSV file
 	outputFile, err := os.Create("test_results.csv")
@@ -105,22 +109,40 @@ func testServices(services []Service, concurrency int, csvWriter *csv.Writer) {
 			go func(s Service, group int) {
 				defer wg.Done()
 				start := time.Now()
-				resp, err := http.Get(s.URL)
+
+				client := &http.Client{
+					Timeout: 10 * time.Second,
+				}
+
+				resp, err := client.Get(s.URL)
 				latency := time.Since(start)
+
+				success := false
+				statusCode := 0
+				if err != nil {
+					fmt.Printf("Error requesting %s: %v\n", s.URL, err)
+				} else {
+					statusCode = resp.StatusCode
+					if resp.StatusCode == http.StatusOK {
+						success = true
+					} else {
+						fmt.Printf("Unexpected status code for %s: %d\n", s.URL, resp.StatusCode)
+					}
+					resp.Body.Close()
+				}
 
 				result := TestResult{
 					ServiceName:     s.Name,
 					RequestTime:     start,
 					Latency:         latency,
-					Success:         err == nil && resp.StatusCode == http.StatusOK,
+					Success:         success,
 					ConcurrentGroup: group,
 				}
 
-				if resp != nil {
-					resp.Body.Close()
-				}
-
 				results <- result
+
+				fmt.Printf("Request to %s completed. Success: %v, Latency: %v, Status Code: %d\n",
+					s.Name, success, latency, statusCode)
 			}(service, concurrency)
 		}
 	}
@@ -138,6 +160,7 @@ func testServices(services []Service, concurrency int, csvWriter *csv.Writer) {
 			strconv.Itoa(result.ConcurrentGroup),
 		})
 	}
+	csvWriter.Flush()
 }
 
 func getSubdirectories(root string) ([]string, error) {
