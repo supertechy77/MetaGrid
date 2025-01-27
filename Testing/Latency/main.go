@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -28,6 +30,12 @@ type TestResult struct {
 	ConcurrentGroup int
 }
 
+var (
+	serviceDirs []string
+	currentDir  string
+	err         error
+)
+
 func main() {
 	// Define services to test
 	services := []Service{
@@ -36,34 +44,49 @@ func main() {
 		{"Traffic Light Service", "http://traffic.localhost/health"},
 	}
 
-	servicesRoot := "../../Services"
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
+	// Start a goroutine to handle the shutdown signal
+	go func() {
+		<-sigChan
+		fmt.Println("\nReceived interrupt signal. Shutting down services...")
+		shutdownAllServices(serviceDirs)
+		os.Exit(0)
+	}()
+
+	// Print current working directory and full path of servicesRoot
+	currentDir, err = os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting current working directory: %v\n", err)
+	}
+
+	servicesRoot := filepath.Join(currentDir, "..", "..", "services")
+
+	fmt.Printf("Current working directory: %s\n", currentDir)
+	fmt.Printf("Services root directory: %s\n", servicesRoot)
+
+	// Query Consul
 	consulURL := "http://localhost:8500/v1/status/leader"
 	resp, err := http.Get(consulURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		log.Fatalf("Failed to reach Consul: %v", err)
+		log.Fatalf("Failed to query Consul or received non-200 status code: %v", err)
 	}
 	resp.Body.Close()
 	fmt.Println("Successfully connected to Consul")
 
 	// Get all subdirectories in the Services folder
-	serviceDirs, err := getSubdirectories(servicesRoot)
-	if err != nil {
+	if err = getSubdirectories(servicesRoot); err != nil {
 		fmt.Printf("Error fetching subdirectories: %v\n", err)
 		return
 	}
 
-	// Iterate over each subdirectory and run `docker-compose up`
+	// Print found service directories
+	fmt.Println("Found service directories:")
 	for _, dir := range serviceDirs {
-		fmt.Printf("Starting service in directory: %s\n", dir)
-		if err := runDockerComposeUp(dir); err != nil {
-			fmt.Printf("Failed to start service in %s: %v\n", dir, err)
-		} else {
-			fmt.Printf("Successfully started service in %s\n", dir)
-		}
-	}
-
-	// Wait for services to be ready
+		fmt.Println(dir)
+		runDockerComposeUp(dir)
+	} // Wait for services to be ready
 	fmt.Println("Waiting for services to be ready...")
 	time.Sleep(10 * time.Second)
 
@@ -163,18 +186,32 @@ func testServices(services []Service, concurrency int, csvWriter *csv.Writer) {
 	csvWriter.Flush()
 }
 
-func getSubdirectories(root string) ([]string, error) {
-	var subdirectories []string
-	files, err := os.ReadDir(root)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			subdirectories = append(subdirectories, filepath.Join(root, file.Name()))
+func shutdownAllServices(serviceDirs []string) {
+	for _, dir := range serviceDirs {
+		fmt.Printf("Stopping service in directory: %s\n", dir)
+		cmd := exec.Command("docker-compose", "down")
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("Failed to stop service in %s: %v\n", dir, err)
 		}
 	}
-	return subdirectories, nil
+}
+
+// getSubdirectories returns a list of subdirectories in the given root directory
+func getSubdirectories(root string) error {
+	serviceDirs = []string{} // Clear the existing slice
+	fmt.Printf("Searching for subdirectories in: %s\n", root)
+
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && path != root {
+			serviceDirs = append(serviceDirs, path)
+			fmt.Printf("Found directory: %s\n", path)
+		}
+		return nil
+	})
 }
 
 // runDockerComposeUp runs `docker-compose up -d` in the given directory

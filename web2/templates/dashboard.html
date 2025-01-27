@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .btn {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-delete {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+        }
+        .btn-update {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        select, input[type="text"] {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service Dashboard</h1>
+    <a href="/">Back to Home</a>
+
+    <!-- Traffic Lights Section -->
+    <div class="section">
+        <h2>Traffic Lights</h2>
+        <form hx-post="/add-traffic-light" hx-target="#traffic-lights" hx-swap="innerHTML">
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" required>
+            </div>
+            <div class="form-group">
+                <label for="color">Color:</label>
+                <select id="color" name="color">
+                    <option value="red">Red</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="green">Green</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-update">Add Traffic Light</button>
+        </form>
+        <div id="traffic-lights" hx-get="/traffic-lights" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
+    </div>
+
+    <!-- Weather Entries Section -->
+    <div class="section">
+        <h2>Weather Entries</h2>
+        <form hx-post="/add-weather-entry" hx-target="#weather-entries" hx-swap="innerHTML">
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" required>
+            </div>
+            <div class="form-group">
+                <label for="temperature">Temperature:</label>
+                <input type="number" id="temperature" name="temperature" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <input type="text" id="description" name="description" required>
+            </div>
+            <button type="submit" class="btn btn-update">Add Weather Entry</button>
+        </form>
+        <div id="weather-entries" hx-get="/weather-entries" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
+    </div>
+
+    <!-- Parking Spots Section -->
+    <div class="section">
+        <h2>Parking Spots</h2>
+        <form hx-post="/add-parking-spot" hx-target="#parking-spots" hx-swap="innerHTML">
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" required>
+            </div>
+            <div class="form-group">
+                <label for="availability">Availability:</label>
+                <select id="availability" name="availability">
+                    <option value="true">Available</option>
+                    <option value="false">Unavailable</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-update">Add Parking Spot</button>
+        </form>
+        <div id="parking-spots" hx-get="/parking-spots" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
+    </div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 services:
   traffic:
-    image: traffic-light-service
+    image: traffic-service
     deploy:
       replicas: 5
     expose:
